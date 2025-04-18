@@ -7,8 +7,14 @@ import plotly.express as px
 import plotly.graph_objects as go
 from collections import Counter
 import re
-import os #추가
-from PIL import Image #추가
+import web_search_youtube 
+from dotenv import load_dotenv
+import os
+from PIL import Image
+
+load_dotenv() #환경변수 가져오기
+YOUTUBE_API_KEY = os.getenv("YOUR_YOUTUBE_API_KEY")
+
 
 # 페이지 설정
 st.set_page_config(
@@ -19,6 +25,7 @@ st.set_page_config(
 
 # 앱 제목
 st.title("🚀 IT 채용정보 분석 대시보드")
+st.write("이 대시보드는 CSV 파일 데이터를 기반으로 한 시각화 애플리케이션입니다.")
 
 # 사이드바
 st.sidebar.title("💻 검색 옵션")
@@ -189,9 +196,167 @@ if df_total is not None:
         st.metric(label="고유 직무 수", value=f"{job_count:,}")
     
     # 탭 생성
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 기업 분석", "🔍 직무 분석", "🧩 기술 스택 분석", "📋 데이터 테이블"])
+    tab1, tab2, tab3, tab4 = st.tabs(["🧩 기술 스택 분석", "🔍 직무 분석",  "📊 기업 분석", "📋 데이터 테이블"])
     
+    # 탭 1: 기술 스택 분석
     with tab1:
+        st.subheader("기술 스택 분석")
+        
+        # 제외할 스킬 목록 정의
+        excluded_skills = ['AI', 'UI', 'UIUX', 'NATIVE', 'BOOT', 'API', 'WEB', 'SW']
+        
+        if df_back is not None and df_front is not None:
+            # 스택별 분석을 위한 서브 탭
+            stack_tab1, stack_tab2, stack_tab3 = st.tabs(["전체 기술 스택", "백엔드 기술 스택", "프론트엔드 기술 스택"])
+            
+            with stack_tab1:
+                total_skill_counts = count_skills(filtered_df, exclude_skills=excluded_skills)
+                skill_df = total_skill_counts.head(15).reset_index()
+                skill_df.columns = ['skill', 'count']
+
+                st.subheader("전체 데이터 상위 기술 스택")
+
+                # GIF 파일이 존재하는지 확인하고 표시
+                if os.path.exists("data/FULL-STACK.gif"):
+                    st.image("data/FULL-STACK.gif", use_column_width=True)
+                else:
+                    st.error("GIF 파일을 찾을 수 없습니다.")
+
+                frames = []
+                for i in range(1, 11):
+                    frames.append(go.Frame(
+                        data=[go.Bar(
+                            x=skill_df['skill'],
+                            y=(skill_df['count'] * (i / 10)).round(1),
+                            marker_color='mediumseagreen')],
+                        name=f'frame{i}'
+                    ))
+
+                fig = go.Figure(
+                    data=[go.Bar(x=skill_df['skill'], y=[0]*len(skill_df), marker_color='mediumseagreen')],
+                    layout=go.Layout(
+                        title='전체 - 상위 15개 기술 스택',
+                        xaxis_title='기술 스택',
+                        yaxis_title='언급 빈도수',
+                        updatemenus=[dict(
+                            type='buttons',
+                            showactive=False,
+                            buttons=[dict(label='▶️ Play', method='animate', args=[None])]
+                        )]
+                    ),
+                    frames=frames
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+
+            
+            with stack_tab2:
+                backend_skill_counts = count_skills(df_back, exclude_skills=excluded_skills)
+                skill_df = backend_skill_counts.head(15).reset_index()
+                skill_df.columns = ['skill', 'count']
+
+                st.subheader("백엔드 직무 상위 기술 스택")
+
+                # GIF 파일이 존재하는지 확인하고 표시
+                if os.path.exists("data/BACK-END.gif"):
+                    st.image("data/BACK-END.gif", use_column_width=True)
+                else:
+                    st.error("GIF 파일을 찾을 수 없습니다.")
+
+                frames = []
+                for i in range(1, 11):
+                    frames.append(go.Frame(
+                        data=[go.Bar(
+                            x=skill_df['skill'],
+                            y=(skill_df['count'] * (i / 10)).round(1),
+                            marker_color='cornflowerblue')],
+                        name=f'frame{i}'
+                    ))
+
+                fig = go.Figure(
+                    data=[go.Bar(x=skill_df['skill'], y=[0]*len(skill_df), marker_color='cornflowerblue')],
+                    layout=go.Layout(
+                        title='백엔드 - 상위 15개 기술 스택',
+                        xaxis_title='기술 스택',
+                        yaxis_title='언급 빈도수',
+                        updatemenus=[dict(
+                            type='buttons',
+                            showactive=False,
+                            buttons=[dict(label='▶️ Play', method='animate', args=[None])]
+                        )]
+                    ),
+                    frames=frames
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+
+            
+            with stack_tab3:
+                frontend_skill_counts = count_skills(df_front, exclude_skills=excluded_skills)
+                skill_df = frontend_skill_counts.head(15).reset_index()
+                skill_df.columns = ['skill', 'count']
+
+                st.subheader("프론트엔드 직무 상위 기술 스택")
+
+                # GIF 파일이 존재하는지 확인하고 표시
+                if os.path.exists("data/FRONT-END.gif"):
+                    st.image("data/FRONT-END.gif", use_column_width=True)
+                else:
+                    st.error("GIF 파일을 찾을 수 없습니다.")
+
+                frames = []
+                for i in range(1, 11):
+                    frames.append(go.Frame(
+                        data=[go.Bar(
+                            x=skill_df['skill'],
+                            y=(skill_df['count'] * (i / 10)).round(1),
+                            marker_color='salmon')],
+                        name=f'frame{i}'
+                    ))
+
+                fig = go.Figure(
+                    data=[go.Bar(x=skill_df['skill'], y=[0]*len(skill_df), marker_color='salmon')],
+                    layout=go.Layout(
+                        title='프론트엔드 - 상위 15개 기술 스택',
+                        xaxis_title='기술 스택',
+                        yaxis_title='언급 빈도수',
+                        updatemenus=[dict(
+                            type='buttons',
+                            showactive=False,
+                            buttons=[dict(label='▶️ Play', method='animate', args=[None])]
+                        )]
+                    ),
+                    frames=frames
+                )
+
+                st.plotly_chart(fig, use_container_width=True)
+
+
+    # 탭 2: 직무 분석
+    with tab2:
+        st.subheader("직무 분석")
+        
+        # 직무명(position) 열의 상위 빈도 항목 출력
+        position_counts = filtered_df['position'].value_counts().head(20).reset_index()
+        position_counts.columns = ['position', 'count']
+        
+        if not position_counts.empty:
+            fig = px.bar(
+                position_counts,
+                x='count',
+                y='position',
+                orientation='h',
+                color='count',
+                color_continuous_scale='Viridis',
+                title='상위 20개 직무'
+            )
+            fig.update_layout(yaxis={'categoryorder':'total ascending'})
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.info("필터링된 데이터가 없습니다.")
+    
+
+    with tab3:
         st.subheader("기업 채용 분석")
 
         company_counts = filtered_df['company'].value_counts().head(20).reset_index()
@@ -235,160 +400,6 @@ if df_total is not None:
             st.info("필터링된 데이터가 없습니다.")
 
     
-    # 탭 2: 직무 분석
-    with tab2:
-        st.subheader("직무 분석")
-        
-        # 직무명(position) 열의 상위 빈도 항목 출력
-        position_counts = filtered_df['position'].value_counts().head(20).reset_index()
-        position_counts.columns = ['position', 'count']
-        
-        if not position_counts.empty:
-            fig = px.bar(
-                position_counts,
-                x='count',
-                y='position',
-                orientation='h',
-                color='count',
-                color_continuous_scale='Viridis',
-                title='상위 20개 직무'
-            )
-            fig.update_layout(yaxis={'categoryorder':'total ascending'})
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("필터링된 데이터가 없습니다.")
-    
-    # 탭 3: 기술 스택 분석
-    with tab3:
-        st.subheader("기술 스택 분석")
-        
-        # 제외할 스킬 목록 정의
-        excluded_skills = ['AI', 'UI', 'UIUX', 'NATIVE', 'BOOT', 'API', 'WEB', 'SW']
-        
-        if df_back is not None and df_front is not None:
-            # 스택별 분석을 위한 서브 탭
-            stack_tab1, stack_tab2, stack_tab3 = st.tabs(["전체 기술 스택", "백엔드 기술 스택", "프론트엔드 기술 스택"])
-            
-            with stack_tab1:
-                total_skill_counts = count_skills(filtered_df, exclude_skills=excluded_skills)
-                skill_df = total_skill_counts.head(15).reset_index()
-                skill_df.columns = ['skill', 'count']
-
-                st.subheader("전체 데이터 상위 기술 스택")
-
-                if os.path.exists("data/FULL-STACK.gif"): # 추가
-                    st.image("data/FULL-STACK.gif", use_column_width=True)
-                else:
-                    st.error("GIF 파일을 찾을 수 없습니다.")
-
-                frames = []
-                for i in range(1, 11):
-                    frames.append(go.Frame(
-                        data=[go.Bar(
-                            x=skill_df['skill'],
-                            y=(skill_df['count'] * (i / 10)).round(1),
-                            marker_color='mediumseagreen')],
-                        name=f'frame{i}'
-                    ))
-
-                fig = go.Figure(
-                    data=[go.Bar(x=skill_df['skill'], y=[0]*len(skill_df), marker_color='mediumseagreen')],
-                    layout=go.Layout(
-                        title='전체 - 상위 15개 기술 스택',
-                        xaxis_title='기술 스택',
-                        yaxis_title='언급 빈도수',
-                        updatemenus=[dict(
-                            type='buttons',
-                            showactive=False,
-                            buttons=[dict(label='▶️ Play', method='animate', args=[None])]
-                        )]
-                    ),
-                    frames=frames
-                )
-
-                st.plotly_chart(fig, use_container_width=True)
-
-            
-            with stack_tab2:
-                backend_skill_counts = count_skills(df_back, exclude_skills=excluded_skills)
-                skill_df = backend_skill_counts.head(15).reset_index()
-                skill_df.columns = ['skill', 'count']
-
-                st.subheader("백엔드 직무 상위 기술 스택")
-
-                if os.path.exists("data/BACK-END.gif"): # 추가
-                    st.image("data/BACK-END.gif", use_column_width=True)
-                else:
-                    st.error("GIF 파일을 찾을 수 없습니다.")
-
-                frames = []
-                for i in range(1, 11):
-                    frames.append(go.Frame(
-                        data=[go.Bar(
-                            x=skill_df['skill'],
-                            y=(skill_df['count'] * (i / 10)).round(1),
-                            marker_color='cornflowerblue')],
-                        name=f'frame{i}'
-                    ))
-
-                fig = go.Figure(
-                    data=[go.Bar(x=skill_df['skill'], y=[0]*len(skill_df), marker_color='cornflowerblue')],
-                    layout=go.Layout(
-                        title='백엔드 - 상위 15개 기술 스택',
-                        xaxis_title='기술 스택',
-                        yaxis_title='언급 빈도수',
-                        updatemenus=[dict(
-                            type='buttons',
-                            showactive=False,
-                            buttons=[dict(label='▶️ Play', method='animate', args=[None])]
-                        )]
-                    ),
-                    frames=frames
-                )
-
-                st.plotly_chart(fig, use_container_width=True)
-
-            
-            with stack_tab3:
-                frontend_skill_counts = count_skills(df_front, exclude_skills=excluded_skills)
-                skill_df = frontend_skill_counts.head(15).reset_index()
-                skill_df.columns = ['skill', 'count']
-
-                st.subheader("프론트엔드 직무 상위 기술 스택")
-
-                if os.path.exists("data/FRONT-END.gif"): # 추가
-                    st.image("data/FRONT-END.gif", use_column_width=True)
-                else:
-                    st.error("GIF 파일을 찾을 수 없습니다.")
-
-                frames = []
-                for i in range(1, 11):
-                    frames.append(go.Frame(
-                        data=[go.Bar(
-                            x=skill_df['skill'],
-                            y=(skill_df['count'] * (i / 10)).round(1),
-                            marker_color='salmon')],
-                        name=f'frame{i}'
-                    ))
-
-                fig = go.Figure(
-                    data=[go.Bar(x=skill_df['skill'], y=[0]*len(skill_df), marker_color='salmon')],
-                    layout=go.Layout(
-                        title='프론트엔드 - 상위 15개 기술 스택',
-                        xaxis_title='기술 스택',
-                        yaxis_title='언급 빈도수',
-                        updatemenus=[dict(
-                            type='buttons',
-                            showactive=False,
-                            buttons=[dict(label='▶️ Play', method='animate', args=[None])]
-                        )]
-                    ),
-                    frames=frames
-                )
-
-                st.plotly_chart(fig, use_container_width=True)
-
-    
     # 탭 4: 데이터 테이블
     with tab4:
         st.subheader("데이터 테이블")
@@ -412,6 +423,35 @@ if df_total is not None:
     # 푸터
     st.sidebar.markdown("---")
     st.sidebar.markdown("© 2025 IT 채용정보 분석 대시보드")
+
+    #YouTube 검색
+    if search_term: 
+        st.subheader("YouTube 검색 결과")
+        results = web_search_youtube.search_youtube(YOUTUBE_API_KEY, f'{search_term} Tutorial', 3)
+        if results:
+            for video in results:
+                # 레이아웃을 두 개의 열로 나눔
+                col1, col2 = st.columns([1, 3])  # 첫 번째 열은 썸네일, 두 번째 열은 텍스트
+
+                with col1:
+                    # 썸네일 URL 생성
+                    thumbnail_url = f"https://img.youtube.com/vi/{video['video_id']}/0.jpg"
+                    # 썸네일을 클릭하면 동영상 링크로 이동하도록 HTML 생성
+                    video_url = f"https://www.youtube.com/watch?v={video['video_id']}"
+                    st.markdown(
+                        f'<a href="{video_url}" target="_blank">'
+                        f'<img src="{thumbnail_url}" alt="YouTube Video" style="width:100%; max-width:300px;">'
+                        f'</a>',
+                        unsafe_allow_html=True
+                    )
+
+                with col2:
+                    # 동영상 제목과 설명 출력
+                    st.write(f"**제목:** {video['title']}")
+                    st.write(f"**설명:** {video['description']}")
+
+                # 구분선 추가
+                st.markdown("---")
     
 else:
     st.error("데이터를 불러오는데 실패했습니다. 파일 경로를 확인해주세요.")
